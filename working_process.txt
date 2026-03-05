@@ -1,0 +1,8 @@
+
+First Step: Deciding Libraries and Planning out Process
+
+To begin we need to figure out how to first make the call to the given number. Then I need to figure out how I want to manage the actual call and its recording. 
+* I have used Groq before and it has very fast inference which leads to low latency. In this situation, quick responses are critical in making the conversation sound natural. I will pair Groq with LangChain to build the conversation engine
+* As far as recording the call, the industry standard is Twilio. I do believe Twilio is pretty straightforward, but I will need to refresh myself on it.
+* I will use flask for the web framework
+
