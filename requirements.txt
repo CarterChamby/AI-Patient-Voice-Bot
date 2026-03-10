@@ -3,3 +3,4 @@ twilio
 langchain
 langchain-groq
 python-dotenv
+flask-sock
