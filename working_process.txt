@@ -5,3 +5,20 @@ To begin we need to figure out how to first make the call to the given number. T
 * I have used Groq before and it has very fast inference which leads to low latency. In this situation, quick responses are critical in making the conversation sound natural. I will pair Groq with LangChain to build the conversation engine
 * As far as recording the call, the industry standard is Twilio. I do believe Twilio is pretty straightforward, but I will need to refresh myself on it.
 * I will use flask for the web framework
+
+
+Step 2: Starting to write code
+
+Obviously we need to start by importing all the required libraries and loading my environments. Afterwards, I need to make sure I initialize the API clients and include the phone number which the bot will call. After these steps I believe I can start writing the functions. I will need probably 3 functions. One to make the call, one to generate the response, and one the generate the voice to reply audibly with the response given by the LLM.
+
+
+Step 3: Writing the functions
+
+I began the code according to my previous step. Now I am going to start on the functions. The first function will be make_call() which should use Twilio to make the call to TEST_NUMBER. I can use the core method 'twilio_client.calls.create()' to make the call. I need to make sure I set the 'record' parameter to True so that the call is recorded so I can include the mp3 files required by the submission. I can return f"Call initiated with SID: {call.sid}" to get the SID for debugging failed calls.
+
+I believe my implementation for make_call() looks good. I am going to move on to generating the voice used to reply. This function will be voice(). Since Twilio doesn't understand raw Python, I'll have to use the helper class VoiceResponse() which formants the Python into the XML that Twilio requires for executing telephony processes. Typically phone bots wait for the caller to speak first and responds based off the speech of the caller, but since our bot will be a "patient," we need it to start speaking first to kickstart the responses between both bots. I'll leave some room for handling the WebSocket stream. I want to get the base of the function written though.
+
+Now I can write the generate agent response. This should be pretty straightforward. I just need to give the llm the prompt and create the chain and invoke it.
+
+
+Step 4: WebSocket Stream
