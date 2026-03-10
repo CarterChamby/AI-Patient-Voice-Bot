@@ -1,3 +1,5 @@
+import base64
+import json
 import os
 from flask import Flask, request
 from twilio.rest import Client
@@ -10,6 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__) # Initialize Flask app
+sock = Sock(app) # Initialize Flask-Sock for WebSocket support
 
 # Initialize API clients
 twilio_client = Client(os.getenv("TWILIO_ACCOUNT_SID"), os.getenv("TWILIO_AUTH_TOKEN"))
@@ -24,7 +27,7 @@ def make_call():
     call = twilio_client.calls.create(
         to = TEST_NUMBER,
         from_ = os.getenv("TWILIO_PHONE_NUMBER"),
-        url = "http://your-server-url.com/voice"  # Replace with your server URL
+        url = "http://your-server-url.com/voice",  # Replace with your server URL
         record = True)
     
     return f"Call initiated with SID: {call.sid}"
@@ -33,13 +36,50 @@ def make_call():
 def voice():
     """Handle incoming call and respond with a message."""
     response = VoiceResponse()
-    response.say("Hello! This is your phone bot. How can I assist you today?", voice = 'alice')
+    response.say("Hello, I am calling to schedule an appointment.", voice = 'alice')
     
-    # In a full implementation, you would use Twilio Media Streams (WebSockets) here
-    # to stream the audio to your LangChain/Groq agent for real-time processing.
-    # response.connect().stream(url=os.getenv("NGROK_WSS_URL") + "/stream")
-    
+    # Connect Twilio's audio to the WebSocket stream
+    connect = Connect()
+    connect.stream(url=os.getenv("NGROK_WSS_URL") + "/stream")
+    response.append(connect)
+
     return str(response)
+@sock.route("/stream")
+def stream(ws):
+    """Handle the audio stream with Twilio."""
+    print("WebSocket connection open!")
+    stream_sid = None
+
+    while True:
+        # Listen for messages
+        message = ws.receive()
+        if message is None:
+            print("WebSocket connection closed!")
+            break
+
+        data = json.loads(message)
+
+        # Handle the different types of stream events
+        if data["event"] == "start":
+            stream_sid = data["start"]["streamSid"]
+            print(f"Stream started with SID: {stream_sid}")
+
+        elif data["event"] == "media":
+            # capture the raw audio bytes from the AI agent
+            audio_chunk = data["media"]["payload"]
+            # we have to decode the audio chunk from base64 to raw bytes before sending it to the agent
+            audio_bytes = base64.b64decode(audio_chunk)
+
+            # ------ THIS IS THE AI's BRAIN ------
+            # TODO: send audio_bytes to a speech-to-text model to get the transcribed text
+            # TODO: pass the trascription to Groq
+            # TODO: send Groq's response to a text-to-speech model to get the audio response bytes
+            # TODO: encode the TTS audio back to base64 and send it to Twilio
+            
+        elif data["event"] == "stop":
+            print(f"Stream stopped with SID: {stream_sid}")
+            break
+
 
 def generate_agent_response(user_input, scenario):
     """Generate a response from the agent based on user input and scenario."""
@@ -48,7 +88,7 @@ def generate_agent_response(user_input, scenario):
         ("user", user_input)
     ])
     
-    chain = prompt | llm
+    chain = prompt | groq_client
     return chain.invoke({"scenario": scenario, "user_input": user_input}).content
 
 if __name__ == "__main__":

@@ -22,3 +22,5 @@ Now I can write the generate agent response. This should be pretty straightforwa
 
 
 Step 4: WebSocket Stream
+
+We can create a loop to handle the audio processing cycle. I will have to get the ID from the 'start' event. From that point I want to actually process the audio. Twilio is able to encode the agent's voice into base64 and send them to the server. Then finally I need a stop event which fires when the call hands up, which closes the loop (simple break call). I will keep the AI's brain until the next step. This will just handle setting up the loop and setting the conditions which enter us into each part of the loop.
