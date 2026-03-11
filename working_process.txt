@@ -6,11 +6,13 @@ To begin we need to figure out how to first make the call to the given number. T
 * As far as recording the call, the industry standard is Twilio. I do believe Twilio is pretty straightforward, but I will need to refresh myself on it.
 * I will use flask for the web framework
 
+__________________________________________
 
 Step 2: Starting to write code
 
 Obviously we need to start by importing all the required libraries and loading my environments. Afterwards, I need to make sure I initialize the API clients and include the phone number which the bot will call. After these steps I believe I can start writing the functions. I will need probably 3 functions. One to make the call, one to generate the response, and one the generate the voice to reply audibly with the response given by the LLM.
 
+__________________________________________
 
 Step 3: Writing the functions
 
@@ -20,7 +22,16 @@ I believe my implementation for make_call() looks good. I am going to move on to
 
 Now I can write the generate agent response. This should be pretty straightforward. I just need to give the llm the prompt and create the chain and invoke it.
 
+__________________________________________
 
 Step 4: WebSocket Stream
 
 We can create a loop to handle the audio processing cycle. I will have to get the ID from the 'start' event. From that point I want to actually process the audio. Twilio is able to encode the agent's voice into base64 and send them to the server. Then finally I need a stop event which fires when the call hands up, which closes the loop (simple break call). I will keep the AI's brain until the next step. This will just handle setting up the loop and setting the conditions which enter us into each part of the loop.
+
+__________________________________________
+
+Step 5: AI Brain (TODO A and B)
+
+Now I need to use the raw audio coming from Twilio and convert it to text. Deepgram is the best program I know of and it has incredibly low latency which should be good for this use case. I have built a Document RAG application before which scanned a PDF and extracted the text to be sent to Groq for processing, so it will be very similar to that, but instead of processing a PDF I just have to process the live audio stream.
+
+__________________________________________
