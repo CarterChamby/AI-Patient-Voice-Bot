@@ -1,9 +1,11 @@
-import base64
-import json
 import os
+import json
+import base64
 from flask import Flask, request
+from flask_sock import Sock
 from twilio.rest import Client
-from twilio.twiml.voice_response import VoiceResponse
+from twilio.twiml.voice_response import VoiceResponse, Connect, Stream
+from deepgram import DeepgramClient, LiveTranscriptionEvents, LiveOptions
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from dotenv import load_dotenv
@@ -50,8 +52,43 @@ def stream(ws):
     print("WebSocket connection open!")
     stream_sid = None
 
+    # setup the deepgram live connection
+    dg_connection = deepgram.listen.live.v("1")
+
+    # describe what happens when deepgram transcribes a phrase
+    def on_message(self, result, **kwargs):
+        sentence = result.channel.alternatives[0].transcript
+        if len(sentence) == 0:
+            return
+            
+        # check if the speaker has finished their thought
+        if result.is_final:
+            print(f"Agent said: {sentence}")
+            
+            # trigger the existing LangChain function
+            bot_reply = generate_agent_response(user_input=sentence, scenario="scheduling an appointment")
+            print(f"Bot replied: {bot_reply}")
+
+            # TODO: convert bot_reply to audio bytes using a text-to-speech model, encode to base64, and send back to Twilio
+
+    # attach the event listener to Deepgram
+    dg_connection.on(LiveTranscriptionEvents.Transcript, on_message)
+
+    # configure deepgram options (Twilio sends 8000Hz mulaw audio by default)
+    options = LiveOptions(
+        model="nova-2",
+        encoding="mulaw",
+        sample_rate=8000,
+        interim_results=False, # we only want the final, complete sentences
+        endpointing=300 # detect silence to know when the agent stopped speaking
+    )
+    dg_connection.start(options)
+
+    
+
+    # Twilio event loop
     while True:
-        # Listen for messages
+        # listen for messages
         message = ws.receive()
         if message is None:
             print("WebSocket connection closed!")
@@ -59,7 +96,7 @@ def stream(ws):
 
         data = json.loads(message)
 
-        # Handle the different types of stream events
+        # handle the different types of stream events
         if data["event"] == "start":
             stream_sid = data["start"]["streamSid"]
             print(f"Stream started with SID: {stream_sid}")
@@ -69,6 +106,7 @@ def stream(ws):
             audio_chunk = data["media"]["payload"]
             # we have to decode the audio chunk from base64 to raw bytes before sending it to the agent
             audio_bytes = base64.b64decode(audio_chunk)
+            dg_connection.send(audio_bytes) # send the rawaudio bytes to Deepgram for transcription
 
             # ------ THIS IS THE AI's BRAIN ------
             # TODO: send audio_bytes to a speech-to-text model to get the transcribed text
@@ -78,6 +116,7 @@ def stream(ws):
             
         elif data["event"] == "stop":
             print(f"Stream stopped with SID: {stream_sid}")
+            dg_connection.finish() # stop the Deepgram connection when the stream ends
             break
 
 
