@@ -4,3 +4,4 @@ langchain
 langchain-groq
 python-dotenv
 flask-sock
+deepgram-sdk==3.*
